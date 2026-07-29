@@ -2,7 +2,6 @@ import {
   Component,
   Host,
   Element,
-  AttachInternals,
   Prop,
   State,
   Event,
@@ -18,6 +17,7 @@ import {
   isValidDate,
   logError,
   handleValidationResult,
+  safeAttachInternals,
 } from '../../utils/utils';
 import {
   Validator,
@@ -41,8 +41,7 @@ import { getDateInputError } from '../../validators/input-validators/input-valid
 export class GcdsDateInput {
   @Element() el: HTMLElement;
 
-  @AttachInternals()
-  internals: ElementInternals;
+  internals: ElementInternals = safeAttachInternals();
 
   private initialValue?: string;
 
@@ -108,12 +107,12 @@ export class GcdsDateInput {
   watchValue() {
     if (this.value) {
       this.splitFormValue();
-      this.internals.setFormValue(this.value);
+      this.internals?.setFormValue(this.value);
     } else {
       this.yearValue = '';
       this.monthValue = '';
       this.dayValue = '';
-      this.internals.setFormValue(null);
+      this.internals?.setFormValue(null);
     }
     this.updateValidity();
   }
@@ -166,7 +165,7 @@ export class GcdsDateInput {
    */
   @Prop()
   get validity() {
-    return this.internals.validity;
+    return this.internals?.validity;
   }
 
   /**
@@ -286,7 +285,9 @@ export class GcdsDateInput {
     );
 
     // Don't use the valueMissing and badInput errors here since they are handled by the validator above
-    if (!this.internals.checkValidity() && !this.internals.validity?.valueMissing && !this.internals.validity?.badInput) {
+    const checkValidity = this.internals?.checkValidity() ?? true;
+    const validity = this.internals?.validity;
+    if (!checkValidity && !validity?.valueMissing && !validity?.badInput) {
       this.errorMessage = this.htmlValidationErrors[0]?.errorMessage;
       this.hasError = {
         ...this.hasError,
@@ -300,7 +301,7 @@ export class GcdsDateInput {
    */
   @Method()
   public async checkValidity(): Promise<boolean> {
-    return this.internals.checkValidity();
+    return this.internals?.checkValidity() ?? true;
   }
 
   /**
@@ -308,7 +309,7 @@ export class GcdsDateInput {
    */
   @Method()
   public async getValidationMessage(): Promise<string> {
-    return this.internals.validationMessage;
+    return this.internals?.validationMessage ?? '';
   }
 
   /*
@@ -336,13 +337,13 @@ export class GcdsDateInput {
 
   formResetCallback() {
     if (this.value != this.initialValue) {
-      this.internals.setFormValue(this.initialValue);
+      this.internals?.setFormValue(this.initialValue);
       this.value = this.initialValue;
     }
   }
 
   formStateRestoreCallback(state) {
-    this.internals.setFormValue(state);
+    this.internals?.setFormValue(state);
     this.value = state;
   }
 
@@ -480,13 +481,14 @@ export class GcdsDateInput {
       validationMessage = errorMessage;
     }
 
-    this.internals.setValidity(validity, validationMessage, formError[0]);
+    this.internals?.setValidity(validity, validationMessage, formError[0]);
   }
 
   /*
    * Observe lang attribute change
    */
   updateLang() {
+    if (typeof MutationObserver === 'undefined') return;
     const observer = new MutationObserver(mutations => {
       if (mutations[0].oldValue != this.el.lang) {
         this.lang = this.el.lang;
@@ -571,7 +573,7 @@ export class GcdsDateInput {
       this.value = `${yearValue}-${monthValue}`;
     }
 
-    this.internals.setFormValue(this.value);
+    this.internals?.setFormValue(this.value);
     this.updateValidity();
 
     return true;
@@ -609,6 +611,8 @@ export class GcdsDateInput {
   }
 
   async componentWillLoad() {
+    this.internals = safeAttachInternals(this.el);
+
     // Define lang attribute
     this.lang = assignLanguage(this.el);
 

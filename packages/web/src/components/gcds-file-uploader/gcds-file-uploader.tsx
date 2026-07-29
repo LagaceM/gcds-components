@@ -10,13 +10,13 @@ import {
   Host,
   h,
   Listen,
-  AttachInternals,
 } from '@stencil/core';
 import {
   assignLanguage,
   handleValidationResult,
   inheritAttributes,
-  observerConfig
+  observerConfig,
+  safeAttachInternals,
 } from '../../utils/utils';
 import {
   Validator,
@@ -39,8 +39,7 @@ import i18n from './i18n/i18n';
 export class GcdsFileUploader {
   @Element() el: HTMLElement;
 
-  @AttachInternals()
-  internals: ElementInternals;
+  internals: ElementInternals = safeAttachInternals();
 
   private shadowElement?: HTMLInputElement;
 
@@ -174,7 +173,7 @@ export class GcdsFileUploader {
    */
   @Prop()
   get validity() {
-    return this.internals.validity;
+    return this.internals?.validity;
   }
 
   /**
@@ -318,7 +317,7 @@ export class GcdsFileUploader {
    */
   @Method()
   public async checkValidity(): Promise<boolean> {
-    return this.internals.checkValidity();
+    return this.internals?.checkValidity() ?? true;
   }
 
   /**
@@ -326,7 +325,7 @@ export class GcdsFileUploader {
    */
   @Method()
   public async getValidationMessage(): Promise<string> {
-    return this.internals.validationMessage;
+    return this.internals?.validationMessage ?? '';
   }
 
   /**
@@ -356,12 +355,12 @@ export class GcdsFileUploader {
    * Form internal functions
    */
   formResetCallback() {
-    this.internals.setFormValue('');
+    this.internals?.setFormValue('');
     this.value = [];
   }
 
   formStateRestoreCallback(state) {
-    this.internals.setFormValue(state);
+    this.internals?.setFormValue(state);
     this.value = state;
   }
 
@@ -377,7 +376,7 @@ export class GcdsFileUploader {
       validationMessage = this.lang === 'en' ? 'You must upload a file to continue.' : 'Vous devez téléverser un fichier pour continuer.';
     }
 
-    this.internals.setValidity(
+    this.internals?.setValidity(
       validity,
       validationMessage,
       this.shadowElement,
@@ -399,7 +398,7 @@ export class GcdsFileUploader {
       });
     }
 
-    this.internals.setFormValue(formData);
+    this.internals?.setFormValue(formData);
   };
 
   /*
@@ -436,6 +435,7 @@ export class GcdsFileUploader {
    * Observe lang attribute change
    */
   updateLang() {
+    if (typeof MutationObserver === 'undefined') return;
     const observer = new MutationObserver(mutations => {
       if (mutations[0].oldValue != this.el.lang) {
         this.lang = this.el.lang;
@@ -445,6 +445,8 @@ export class GcdsFileUploader {
   }
 
   async componentWillLoad() {
+    this.internals = safeAttachInternals(this.el);
+
     // Define lang attribute
     this.lang = assignLanguage(this.el);
 

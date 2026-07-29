@@ -10,13 +10,13 @@ import {
   Host,
   h,
   Listen,
-  AttachInternals,
 } from '@stencil/core';
 import {
   assignLanguage,
   handleValidationResult,
   inheritAttributes,
   observerConfig,
+  safeAttachInternals,
 } from '../../utils/utils';
 import {
   Validator,
@@ -40,8 +40,7 @@ import {
 export class GcdsSelect {
   @Element() el: HTMLElement;
 
-  @AttachInternals()
-  internals: ElementInternals;
+  internals: ElementInternals = safeAttachInternals();
 
   private initialValue?: string;
 
@@ -122,10 +121,10 @@ export class GcdsSelect {
     if (!this.shadowElement) return;
 
     if (val && this.checkIfValidValue(val)) {
-      this.internals.setFormValue(val);
+      this.internals?.setFormValue(val);
       this.shadowElement.value = val;
     } else {
-      this.internals.setFormValue(null);
+      this.internals?.setFormValue(null);
       this.value = null;
     }
 
@@ -157,7 +156,7 @@ export class GcdsSelect {
    */
   @Prop()
   get validity() {
-    return this.internals.validity;
+    return this.internals?.validity;
   }
 
   /**
@@ -232,7 +231,7 @@ export class GcdsSelect {
   private handleInput = (e, customEvent) => {
     const val = e.target && e.target.value;
     this.value = val;
-    this.internals.setFormValue(val);
+    this.internals?.setFormValue(val);
 
     if (e.type === 'change') {
       const changeEvt = new e.constructor(e.type, e);
@@ -284,7 +283,7 @@ export class GcdsSelect {
    */
   @Method()
   public async checkValidity(): Promise<boolean> {
-    return this.internals.checkValidity();
+    return this.internals?.checkValidity() ?? true;
   }
 
   /**
@@ -292,7 +291,7 @@ export class GcdsSelect {
    */
   @Method()
   public async getValidationMessage(): Promise<string> {
-    return this.internals.validationMessage;
+    return this.internals?.validationMessage ?? '';
   }
 
   /**
@@ -326,11 +325,11 @@ export class GcdsSelect {
 
     if (this.value === value) {
       option.setAttribute('selected', 'true');
-      this.internals.setFormValue(value);
+      this.internals?.setFormValue(value);
       this.initialValue = this.value;
     } else if (option.hasAttribute('selected')) {
       this.value = value;
-      this.internals.setFormValue(value);
+      this.internals?.setFormValue(value);
       this.initialValue = this.value ? this.value : null;
     }
   }
@@ -366,13 +365,13 @@ export class GcdsSelect {
    */
   formResetCallback() {
     if (this.value != this.initialValue) {
-      this.internals.setFormValue(this.initialValue);
+      this.internals?.setFormValue(this.initialValue);
       this.value = this.initialValue;
     }
   }
 
   formStateRestoreCallback(state) {
-    this.internals.setFormValue(state);
+    this.internals?.setFormValue(state);
     this.value = state;
   }
 
@@ -392,7 +391,7 @@ export class GcdsSelect {
           : 'Choisissez une option pour continuer.';
     }
 
-    this.internals.setValidity(validity, validationMessage, this.shadowElement);
+    this.internals?.setValidity(validity, validationMessage, this.shadowElement);
 
     // Set select title when HTML error occruring
     this.selectTitle = validationMessage;
@@ -418,6 +417,7 @@ export class GcdsSelect {
    * Observe lang attribute change
    */
   updateLang() {
+    if (typeof MutationObserver === 'undefined') return;
     const observer = new MutationObserver(mutations => {
       if (mutations[0].oldValue != this.el.lang) {
         this.lang = this.el.lang;
@@ -427,6 +427,8 @@ export class GcdsSelect {
   }
 
   async componentWillLoad() {
+    this.internals = safeAttachInternals(this.el);
+
     // Define lang attribute
     this.lang = assignLanguage(this.el);
 

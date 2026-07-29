@@ -79,6 +79,41 @@ export const observerConfig = {
   attributeFilter: ['lang'],
 };
 
+const fallbackValidityState: ValidityState = {
+  valueMissing: false,
+  typeMismatch: false,
+  patternMismatch: false,
+  tooLong: false,
+  tooShort: false,
+  rangeUnderflow: false,
+  rangeOverflow: false,
+  stepMismatch: false,
+  badInput: false,
+  customError: false,
+  valid: true,
+};
+
+const fallbackElementInternals = {
+  validity: fallbackValidityState,
+  validationMessage: '',
+  checkValidity: () => true,
+  reportValidity: () => true,
+  setFormValue: () => undefined,
+  setValidity: () => undefined,
+} as unknown as ElementInternals;
+
+export const safeAttachInternals = (el?: HTMLElement): ElementInternals => {
+  const host = el as HTMLElement & {
+    attachInternals?: () => ElementInternals;
+  };
+
+  if (host && typeof host.attachInternals === 'function') {
+    return host.attachInternals();
+  }
+
+  return fallbackElementInternals;
+};
+
 // For validation - check if element has a checked checkbox/radio sibling
 export const elementGroupCheck = name => {
   let hasCheck = false;

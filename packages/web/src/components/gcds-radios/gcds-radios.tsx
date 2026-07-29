@@ -11,7 +11,6 @@ import {
   Host,
   Fragment,
   h,
-  AttachInternals,
 } from '@stencil/core';
 
 import { RadioObject, isRadioObject } from './radio';
@@ -21,7 +20,8 @@ import {
   handleErrors,
   isValid,
   handleValidationResult,
-  validateRadioCheckboxGroup
+  validateRadioCheckboxGroup,
+  safeAttachInternals,
 } from '../../utils/utils';
 import {
   Validator,
@@ -44,8 +44,7 @@ import i18n from './i18n/i18n';
 export class GcdsRadios {
   @Element() el: HTMLElement;
 
-  @AttachInternals()
-  internals: ElementInternals;
+  internals: ElementInternals = safeAttachInternals();
 
   private shadowElement?: HTMLInputElement[];
 
@@ -97,7 +96,7 @@ export class GcdsRadios {
       this.optionsArr.forEach(radio => {
         if (radio.checked === 'true' || radio.checked === true) {
           this.value = radio.value;
-          this.internals.setFormValue(radio.value, 'checked');
+          this.internals?.setFormValue(radio.value, 'checked');
         }
       });
     }
@@ -185,7 +184,7 @@ export class GcdsRadios {
       // unset value if no radio button with value available
       if (!isValidValue) {
         this.value = null;
-        this.internals.setFormValue(this.value);
+        this.internals?.setFormValue(this.value);
       }
 
       this.updateValidity();
@@ -197,7 +196,7 @@ export class GcdsRadios {
    */
   @Prop()
   get validity() {
-    return this.internals.validity;
+    return this.internals?.validity;
   }
 
   /**
@@ -265,7 +264,7 @@ export class GcdsRadios {
    */
   @Method()
   public async checkValidity(): Promise<boolean> {
-    return this.internals.checkValidity();
+    return this.internals?.checkValidity() ?? true;
   }
 
   /**
@@ -273,7 +272,7 @@ export class GcdsRadios {
    */
   @Method()
   public async getValidationMessage(): Promise<string> {
-    return this.internals.validationMessage;
+    return this.internals?.validationMessage ?? '';
   }
 
   /**
@@ -340,13 +339,13 @@ export class GcdsRadios {
    */
   formResetCallback() {
     if (this.value != this.initialValue) {
-      this.internals.setFormValue(this.initialValue, 'checked');
+      this.internals?.setFormValue(this.initialValue, 'checked');
       this.value = this.initialValue;
     }
   }
 
   formStateRestoreCallback(state) {
-    this.internals.setFormValue(state);
+    this.internals?.setFormValue(state);
     this.value = state;
   }
 
@@ -363,7 +362,7 @@ export class GcdsRadios {
         validationMessage = this.lang === 'en' ? 'Choose an option to continue.' : 'Choisissez une option pour continuer.';
       }
 
-      this.internals.setValidity(
+      this.internals?.setValidity(
         validity,
         validationMessage,
         this.shadowElement[0],
@@ -387,7 +386,7 @@ export class GcdsRadios {
   private handleInput = (e, customEvent) => {
     const val = e.target && e.target.value;
     this.value = val;
-    this.internals.setFormValue(val ? val : null, 'checked');
+    this.internals?.setFormValue(val ? val : null, 'checked');
 
     if (e.type === 'change') {
       const changeEvt = new e.constructor(e.type, e);
@@ -410,6 +409,8 @@ export class GcdsRadios {
   }
 
   async componentWillLoad() {
+    this.internals = safeAttachInternals(this.el);
+
     // Define lang attribute
     this.lang = assignLanguage(this.el);
 

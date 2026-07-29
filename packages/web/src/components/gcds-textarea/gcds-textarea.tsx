@@ -10,7 +10,6 @@ import {
   Prop,
   h,
   Listen,
-  AttachInternals,
   Fragment,
 } from '@stencil/core';
 import {
@@ -19,6 +18,7 @@ import {
   inheritAttributes,
   observerConfig,
   formatHTMLErrorMessage,
+  safeAttachInternals,
 } from '../../utils/utils';
 import {
   Validator,
@@ -41,8 +41,7 @@ import i18n from './i18n/i18n';
 export class GcdsTextarea {
   @Element() el: HTMLElement;
 
-  @AttachInternals()
-  internals: ElementInternals;
+  internals: ElementInternals = safeAttachInternals();
 
   private initialValue?: string;
 
@@ -171,7 +170,7 @@ export class GcdsTextarea {
     }
 
     // Update form value for form association
-    this.internals.setFormValue(val || null);
+    this.internals?.setFormValue(val || null);
   }
   /**
    * Array of validators
@@ -195,7 +194,7 @@ export class GcdsTextarea {
    */
   @Prop()
   get validity() {
-    return this.internals.validity;
+    return this.internals?.validity;
   }
 
   /**
@@ -290,7 +289,7 @@ export class GcdsTextarea {
   private handleInput = (e, customEvent) => {
     const val = e.target && e.target.value;
     this.value = val;
-    this.internals.setFormValue(val ? val : null);
+    this.internals?.setFormValue(val ? val : null);
     this.shadowElement.value = val;
 
     if (e.type === 'change') {
@@ -322,11 +321,9 @@ export class GcdsTextarea {
     );
 
     // Native HTML validation
-    if (
-      (this.required && !this.internals.checkValidity()) ||
-      !this.internals.checkValidity()
-    ) {
-      if (!this.internals.validity.valueMissing) {
+    const checkValidity = this.internals?.checkValidity() ?? true;
+    if ((this.required && !checkValidity) || !checkValidity) {
+      if (!this.internals?.validity?.valueMissing) {
         this.errorMessage = formatHTMLErrorMessage(
           this.htmlValidationErrors[0],
           this.lang,
@@ -342,7 +339,7 @@ export class GcdsTextarea {
    */
   @Method()
   public async checkValidity(): Promise<boolean> {
-    return this.internals.checkValidity();
+    return this.internals?.checkValidity() ?? true;
   }
 
   /**
@@ -350,7 +347,7 @@ export class GcdsTextarea {
    */
   @Method()
   public async getValidationMessage(): Promise<string> {
-    return this.internals.validationMessage;
+    return this.internals?.validationMessage ?? '';
   }
 
   /**
@@ -390,12 +387,12 @@ export class GcdsTextarea {
       }
 
       // Update form value
-      this.internals.setFormValue(this.initialValue || null);
+      this.internals?.setFormValue(this.initialValue || null);
     }
   }
 
   formStateRestoreCallback(state) {
-    this.internals.setFormValue(state);
+    this.internals?.setFormValue(state);
     this.value = state;
   }
 
@@ -431,7 +428,7 @@ export class GcdsTextarea {
       );
     }
 
-    this.internals.setValidity(
+    this.internals?.setValidity(
       validityState,
       validationMessage,
       this.shadowElement,
@@ -445,6 +442,7 @@ export class GcdsTextarea {
    * Observe lang attribute change
    */
   updateLang() {
+    if (typeof MutationObserver === 'undefined') return;
     const observer = new MutationObserver(mutations => {
       if (mutations[0].oldValue != this.el.lang) {
         this.lang = this.el.lang;
@@ -454,6 +452,8 @@ export class GcdsTextarea {
   }
 
   async componentWillLoad() {
+    this.internals = safeAttachInternals(this.el);
+
     // Define lang attribute
     this.lang = assignLanguage(this.el);
 
@@ -472,7 +472,7 @@ export class GcdsTextarea {
       'placeholder',
     ]);
 
-    this.internals.setFormValue(this.value ? this.value : null);
+    this.internals?.setFormValue(this.value ? this.value : null);
     this.initialValue = this.value ? this.value : null;
     this.lastInputValue = this.value ? this.value : '';
   }

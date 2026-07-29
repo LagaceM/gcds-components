@@ -11,7 +11,6 @@ import {
   Watch,
   Host,
   h,
-  AttachInternals,
 } from '@stencil/core';
 import {
   assignLanguage,
@@ -21,6 +20,7 @@ import {
   isValid,
   handleValidationResult,
   validateRadioCheckboxGroup,
+  safeAttachInternals,
 } from '../../utils/utils';
 import {
   Validator,
@@ -49,8 +49,7 @@ import i18n from './i18n/i18n';
 export class GcdsCheckboxes {
   @Element() el: HTMLGcdsCheckboxesElement;
 
-  @AttachInternals()
-  internals: ElementInternals;
+  internals: ElementInternals = safeAttachInternals();
 
   private initialState?: string | string[];
 
@@ -179,7 +178,7 @@ export class GcdsCheckboxes {
 
       // Set form value only when a value is assigned
       if ((this.value as string[]).length > 0) {
-        this.internals.setFormValue(this.value.toString());
+        this.internals?.setFormValue(this.value.toString());
       }
     }
 
@@ -227,7 +226,7 @@ export class GcdsCheckboxes {
    */
   @Prop()
   get validity() {
-    return this.internals.validity;
+    return this.internals?.validity;
   }
 
   /**
@@ -363,7 +362,7 @@ export class GcdsCheckboxes {
   }
 
   formStateRestoreCallback(state) {
-    this.internals.setFormValue(state);
+    this.internals?.setFormValue(state);
     this.value = [...state.split(',')];
   }
 
@@ -372,7 +371,7 @@ export class GcdsCheckboxes {
    */
   @Method()
   public async checkValidity(): Promise<boolean> {
-    return this.internals.checkValidity();
+    return this.internals?.checkValidity() ?? true;
   }
 
   /**
@@ -380,7 +379,7 @@ export class GcdsCheckboxes {
    */
   @Method()
   public async getValidationMessage(): Promise<string> {
-    return this.internals.validationMessage;
+    return this.internals?.validationMessage ?? '';
   }
 
   /**
@@ -399,7 +398,7 @@ export class GcdsCheckboxes {
             : 'Choisissez une option pour continuer.';
       }
 
-      this.internals.setValidity(
+      this.internals?.setValidity(
         validity,
         validationMessage,
         this.shadowElement[0],
@@ -433,6 +432,8 @@ export class GcdsCheckboxes {
   }
 
   async componentWillLoad() {
+    this.internals = safeAttachInternals(this.el);
+
     // Define lang attribute
     this.lang = assignLanguage(this.el);
 
@@ -512,9 +513,9 @@ export class GcdsCheckboxes {
 
       // Keep form-associated value in sync
       if ((this.value as string[]).length > 0) {
-        this.internals.setFormValue(this.value.toString());
+        this.internals?.setFormValue(this.value.toString());
       } else {
-        this.internals.setFormValue(null);
+        this.internals?.setFormValue(null);
       }
 
       this.updateValidity();

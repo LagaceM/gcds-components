@@ -83,6 +83,7 @@ export class GcdsAlert {
    * Observe lang attribute change
    */
   updateLang() {
+    if (typeof MutationObserver === 'undefined') return;
     const observer = new MutationObserver(mutations => {
       if (mutations[0].oldValue != this.el.lang) {
         this.lang = this.el.lang;

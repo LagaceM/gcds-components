@@ -10,7 +10,6 @@ import {
   Prop,
   h,
   Listen,
-  AttachInternals,
 } from '@stencil/core';
 import {
   assignLanguage,
@@ -20,6 +19,7 @@ import {
   formatHTMLErrorMessage,
   logError,
   handleErrors,
+  safeAttachInternals,
 } from '../../utils/utils';
 import {
   Validator,
@@ -43,8 +43,7 @@ import { SuggestionOption, isSuggestionObject } from './suggestion-option';
 export class GcdsInput {
   @Element() el: HTMLElement;
 
-  @AttachInternals()
-  internals: ElementInternals;
+  internals: ElementInternals = safeAttachInternals();
 
   private initialValue?: string;
 
@@ -147,7 +146,7 @@ export class GcdsInput {
 
   @Watch('value')
   watchValue(val) {
-    this.internals.setFormValue(val ? val : null);
+    this.internals?.setFormValue(val ? val : null);
   }
 
   /**
@@ -210,7 +209,7 @@ export class GcdsInput {
    */
   @Prop()
   get validity() {
-    return this.internals.validity;
+    return this.internals?.validity;
   }
 
   /**
@@ -353,7 +352,7 @@ export class GcdsInput {
   private handleInput = (e, customEvent) => {
     const val = e.target && e.target.value;
     this.value = val;
-    this.internals.setFormValue(val ? val : null);
+    this.internals?.setFormValue(val ? val : null);
 
     if (e.type === 'change') {
       if (
@@ -394,11 +393,9 @@ export class GcdsInput {
     );
 
     // Native HTML validation
-    if (
-      (this.required && !this.internals.checkValidity()) ||
-      !this.internals.checkValidity()
-    ) {
-      if (!this.internals.validity.valueMissing) {
+    const checkValidity = this.internals?.checkValidity() ?? true;
+    if ((this.required && !checkValidity) || !checkValidity) {
+      if (!this.internals?.validity?.valueMissing) {
         this.errorMessage = formatHTMLErrorMessage(
           this.htmlValidationErrors[0],
           this.lang,
@@ -414,7 +411,7 @@ export class GcdsInput {
    */
   @Method()
   public async checkValidity(): Promise<boolean> {
-    return this.internals.checkValidity();
+    return this.internals?.checkValidity() ?? true;
   }
 
   /**
@@ -422,7 +419,7 @@ export class GcdsInput {
    */
   @Method()
   public async getValidationMessage(): Promise<string> {
-    return this.internals.validationMessage;
+    return this.internals?.validationMessage ?? '';
   }
 
   /**
@@ -465,13 +462,13 @@ export class GcdsInput {
    */
   formResetCallback() {
     if (this.value != this.initialValue) {
-      this.internals.setFormValue(this.initialValue);
+      this.internals?.setFormValue(this.initialValue);
       this.value = this.initialValue;
     }
   }
 
   formStateRestoreCallback(state) {
-    this.internals.setFormValue(state);
+    this.internals?.setFormValue(state);
     this.value = state;
   }
 
@@ -507,7 +504,7 @@ export class GcdsInput {
       );
     }
 
-    this.internals.setValidity(
+    this.internals?.setValidity(
       validityState,
       validationMessage,
       this.shadowElement,
@@ -521,6 +518,7 @@ export class GcdsInput {
    * Observe lang attribute change
    */
   updateLang() {
+    if (typeof MutationObserver === 'undefined') return;
     const observer = new MutationObserver(mutations => {
       if (mutations[0].oldValue != this.el.lang) {
         this.lang = this.el.lang;
@@ -530,6 +528,8 @@ export class GcdsInput {
   }
 
   async componentWillLoad() {
+    this.internals = safeAttachInternals(this.el);
+
     // Define lang attribute
     this.lang = assignLanguage(this.el);
 
@@ -547,7 +547,7 @@ export class GcdsInput {
 
     this.inheritedAttributes = inheritAttributes(this.el, this.shadowElement);
 
-    this.internals.setFormValue(this.value ? this.value : null);
+    this.internals?.setFormValue(this.value ? this.value : null);
     this.initialValue = this.value ? this.value : null;
   }
 
